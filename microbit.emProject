@@ -12,7 +12,7 @@
     gcc_debugging_level="Level 2"
     gcc_omit_frame_pointer="Yes"
     gcc_optimization_level="Level 2 balanced" />
-  <project Name="00std_leds">
+  <project Name="00std_led_center">
     <configuration
       LIBRARY_IO_TYPE="RTT"
       Name="Common"
@@ -42,7 +42,7 @@
       link_linker_script_file="$(ProjectDir)/../common/system/nRF_Flash_Variant1.icf"
       linker_memory_map_file="$(ProjectDir)/../common/system/nRF52833_xxAA_MemoryMap.xml"
       macros="DeviceHeaderFile=$(PackagesDir)/../common/system/nRF/Device/Include/nrf.h;DeviceSystemFile=$(PackagesDir)/../common/system/nRF/Device/Source/system_nrf52.c;DeviceVectorsFile=$(PackagesDir)/../common/system/nRF/Source/nrf52833_Vectors.s;DeviceFamily=nRF;Target=nRF52833_xxAA"
-      project_directory="00std_led"
+      project_directory="00std_led_center"
       project_type="Executable"
       target_reset_script="Reset();"
       target_trace_initialize_script="EnableTrace(&quot;$(TraceInterfaceType)&quot;)" />
@@ -62,7 +62,7 @@
     </folder>
     <folder Name="Source Files">
       <configuration Name="Common" filter="c;cpp;cxx;cc;h;s;asm;inc" />
-      <file file_name="00std_led.c" />
+      <file file_name="00std_led_center.c" />
     </folder>
     <folder Name="System Files">
       <file file_name="../common/system/nRF/Source/nrf52833_Vectors.s">
