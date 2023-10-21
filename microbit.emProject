@@ -5,7 +5,8 @@
     c_preprocessor_definitions="DEBUG"
     gcc_debugging_level="Level 3"
     gcc_omit_frame_pointer="Yes"
-    gcc_optimization_level="None" />
+    gcc_optimization_level="None"
+    linker_output_format="hex" />
   <configuration
     Name="Release"
     c_preprocessor_definitions="NDEBUG"
@@ -34,7 +35,7 @@
       arm_target_interface_type="SWD"
       c_preprocessor_definitions="ARM_MATH_CM4;NRF52833_XXAA;__NRF_FAMILY"
       c_user_include_directories="$(ProjectDir)/../common/system/CMSIS_5/CMSIS/Core/Include;$(ProjectDir)/../common/system/nRF/Device/Include"
-      debug_register_definition_file="$(ProjectDir)/nrf52833_Registers.xml"
+      debug_register_definition_file="$(ProjectDir)/../common/system/nrf52833_Registers.xml"
       debug_stack_pointer_start="__stack_end__"
       debug_start_from_entry_point_symbol="No"
       debug_target_connection="J-Link"
@@ -94,7 +95,7 @@
       arm_target_interface_type="SWD"
       c_preprocessor_definitions="ARM_MATH_CM4;NRF52833_XXAA;__NRF_FAMILY"
       c_user_include_directories="$(ProjectDir)/../common/system/CMSIS_5/CMSIS/Core/Include;$(ProjectDir)/../common/system/nRF/Device/Include"
-      debug_register_definition_file="$(ProjectDir)/nrf52833_Registers.xml"
+      debug_register_definition_file="$(ProjectDir)/../common/system/nrf52833_Registers.xml"
       debug_stack_pointer_start="__stack_end__"
       debug_start_from_entry_point_symbol="No"
       debug_target_connection="J-Link"
@@ -154,7 +155,7 @@
       arm_target_interface_type="SWD"
       c_preprocessor_definitions="ARM_MATH_CM4;NRF52833_XXAA;__NRF_FAMILY"
       c_user_include_directories="$(ProjectDir)/../common/system/CMSIS_5/CMSIS/Core/Include;$(ProjectDir)/../common/system/nRF/Device/Include"
-      debug_register_definition_file="$(ProjectDir)/nrf52833_Registers.xml"
+      debug_register_definition_file="$(ProjectDir)/../common/system/nrf52833_Registers.xml"
       debug_stack_pointer_start="__stack_end__"
       debug_start_from_entry_point_symbol="No"
       debug_target_connection="J-Link"
