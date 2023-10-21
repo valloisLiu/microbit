@@ -12,7 +12,7 @@
     gcc_debugging_level="Level 2"
     gcc_omit_frame_pointer="Yes"
     gcc_optimization_level="Level 2 balanced" />
-  <project Name="microbit">
+  <project Name="00std_leds">
     <configuration
       LIBRARY_IO_TYPE="RTT"
       Name="Common"
@@ -33,22 +33,22 @@
       arm_target_device_name="nRF52833_xxAA"
       arm_target_interface_type="SWD"
       c_preprocessor_definitions="ARM_MATH_CM4;NRF52833_XXAA;__NRF_FAMILY"
-      c_user_include_directories="$(ProjectDir)/CMSIS_5/CMSIS/Core/Include;$(ProjectDir)/nRF/Device/Include"
+      c_user_include_directories="$(ProjectDir)/../common/system/CMSIS_5/CMSIS/Core/Include;$(ProjectDir)/../common/system/nRF/Device/Include"
       debug_register_definition_file="$(ProjectDir)/nrf52833_Registers.xml"
       debug_stack_pointer_start="__stack_end__"
       debug_start_from_entry_point_symbol="No"
       debug_target_connection="J-Link"
       gcc_entry_point="Reset_Handler"
-      link_linker_script_file="$(ProjectDir)/nRF_Flash_Variant1.icf"
-      linker_memory_map_file="$(ProjectDir)/nRF52833_xxAA_MemoryMap.xml"
-      macros="DeviceHeaderFile=$(PackagesDir)/nRF/Device/Include/nrf.h;DeviceSystemFile=$(PackagesDir)/nRF/Device/Source/system_nrf52.c;DeviceVectorsFile=$(PackagesDir)/nRF/Source/nrf52833_Vectors.s;DeviceFamily=nRF;Target=nRF52833_xxAA"
-      project_directory=""
+      link_linker_script_file="$(ProjectDir)/../common/system/nRF_Flash_Variant1.icf"
+      linker_memory_map_file="$(ProjectDir)/../common/system/nRF52833_xxAA_MemoryMap.xml"
+      macros="DeviceHeaderFile=$(PackagesDir)/../common/system/nRF/Device/Include/nrf.h;DeviceSystemFile=$(PackagesDir)/../common/system/nRF/Device/Source/system_nrf52.c;DeviceVectorsFile=$(PackagesDir)/../common/system/nRF/Source/nrf52833_Vectors.s;DeviceFamily=nRF;Target=nRF52833_xxAA"
+      project_directory="00std_led"
       project_type="Executable"
       target_reset_script="Reset();"
       target_trace_initialize_script="EnableTrace(&quot;$(TraceInterfaceType)&quot;)" />
     <folder Name="CMSIS Files">
-      <file file_name="nRF/Device/Include/nrf.h" />
-      <file file_name="nRF/Device/Source/system_nrf52.c">
+      <file file_name="../common/system/nRF/Device/Include/nrf.h" />
+      <file file_name="../common/system/nRF/Device/Source/system_nrf52.c">
         <configuration
           Name="Common"
           default_code_section=".init"
@@ -56,20 +56,20 @@
       </file>
     </folder>
     <folder Name="Script Files">
-      <file file_name="nRF/Scripts/nRF_Target.js">
+      <file file_name="../common/system/nRF/Scripts/nRF_Target.js">
         <configuration Name="Common" file_type="Reset Script" />
       </file>
     </folder>
     <folder Name="Source Files">
       <configuration Name="Common" filter="c;cpp;cxx;cc;h;s;asm;inc" />
-      <file file_name="main.c" />
+      <file file_name="00std_led.c" />
     </folder>
     <folder Name="System Files">
-      <file file_name="nRF/Source/nrf52833_Vectors.s">
+      <file file_name="../common/system/nRF/Source/nrf52833_Vectors.s">
         <configuration Name="Common" file_type="Assembly" />
       </file>
-      <file file_name="nRF/Source/nRF_Startup.s" />
-      <file file_name="SEGGER_THUMB_Startup.s" />
+      <file file_name="../common/system/nRF/Source/nRF_Startup.s" />
+      <file file_name="../common/system/SEGGER_THUMB_Startup.s" />
     </folder>
   </project>
 </solution>
