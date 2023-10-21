@@ -23,7 +23,7 @@ int main(void) {
 
     //=== pull COL3 low
 
-    // ROW3 == P0.31
+    // COL3 == P0.31
 
     NRF_P0->PIN_CNF[31]           = 0x00000003;
 

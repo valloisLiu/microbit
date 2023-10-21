@@ -1,3 +1,4 @@
 *.emSession
-/00std_led_center/Output/
 *.jlink
+/00std_leds_1_center/Output/
+/00std_leds_2_all/Output/
