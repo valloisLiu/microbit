@@ -6,6 +6,7 @@ sources:
     https://wiki.elecfreaks.com/en/microbit/robot/xgo-robot-kit-v2/
     https://github.com/elecfreaks/pxt-xgo/blob/master/main.ts
     https://makecode.microbit.org/device/pins
+    https://wiki.elecfreaks.com/en/pico/cm4-xgo-robot-kit/advanced-development/serial-protocol/
     
     UART
         tx==P2 onthe micro:bit silkscreen==P0.04 on the nRF (RING2 line on schematic)
@@ -13,7 +14,17 @@ sources:
         baudrate: 115200
 */
 
-uint8_t BUF_ACTION_SIT_DOWN[] = {0x55, 0x00, 0x09, 0x00, 0x3E, 0x0C, 0xAC, 0x00, 0xAA};
+uint8_t BUF_ACTION_SIT_DOWN[] = {
+    0x55, // header 1
+    0x00, // header 2
+    0x09, // length
+    0x00, // command_type
+    0x3e, // address (0x3e==action command)
+    0x0C, // data    (12==sit down)
+    0xAC, // crc
+    0x00, // end 1
+    0xAA, // end 2
+};
 
 uint8_t uartvars_txBuf[9];
 uint8_t uartvars_rxBuf[9];
@@ -21,9 +32,35 @@ uint8_t uartvars_rxBuf[9];
 int main(void) {
     
     // start hfclock
+    /*
     NRF_CLOCK->EVENTS_HFCLKSTARTED     = 0;
     NRF_CLOCK->TASKS_HFCLKSTART        = 0x00000001;
     while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
+    */
+
+    // configure P0.04 (UART TX) as output
+    //  3           2            1           0
+    // 1098 7654 3210 9876 5432 1098 7654 3210
+    // .... .... .... .... .... .... .... ...A A: DIR:     1=Output
+    // .... .... .... .... .... .... .... ..B. B: INPUT:   1=Disconnect
+    // .... .... .... .... .... .... .... CC.. C: PULL:    0=Disabled
+    // .... .... .... .... .... .DDD .... .... D: DRIVE:   0=S0S1
+    // .... .... .... ..EE .... .... .... .... E: SENSE:   0=Disabled
+    // xxxx xxxx xxxx xx00 xxxx xxxx xxxx 0011 
+    //    0    0    0    0    0    0    0    3 0x00000003
+    NRF_P0->PIN_CNF[4]                 = 0x00000003;
+
+    // configure P0.03 (UART RX) as input
+    //  3           2            1           0
+    // 1098 7654 3210 9876 5432 1098 7654 3210
+    // .... .... .... .... .... .... .... ...A A: DIR:     0=Input
+    // .... .... .... .... .... .... .... ..B. B: INPUT:   0=Connect
+    // .... .... .... .... .... .... .... CC.. C: PULL:    0=Disabled
+    // .... .... .... .... .... .DDD .... .... D: DRIVE:   0=S0S1
+    // .... .... .... ..EE .... .... .... .... E: SENSE:   0=Disabled
+    // xxxx xxxx xxxx xx00 xxxx xxxx xxxx 0000 
+    //    0    0    0    0    0    0    0    0 0x00000000
+    NRF_P0->PIN_CNF[3]                 = 0x00000002;
 
     // configure
     NRF_UARTE0->RXD.PTR                = (uint32_t)uartvars_rxBuf;
