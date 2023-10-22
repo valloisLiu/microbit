@@ -2,58 +2,55 @@
 
 /*
 sources:
-    https://github.com/elecfreaks/circuitpython_cutebot/blob/main/cutebot.py
-    https://github.com/Krakenus/microbit-cutebot-micropython/blob/master/cutebot.py
-    https://github.com/bbcmicrobit/micropython/blob/master/source/microbit/microbiti2c.cpp
-    https://microbit-micropython.readthedocs.io/en/latest/i2c.html#
-    https://makecode.microbit.org/device/pins
-
+    https://github.com/elecfreaks/pxt-Cutebot-Pro/blob/master/main.ts
 I2C:
-    config:
-        7-bit addressing
-    pins:
-        freq: 100000
-        SCL==micro:bit pin 19 (header)==P0.26 (nRF)
-        SDA==micro:bit pin 20 (header)==P1.00 (nRF)
+    same a Cutebot
 */
 
 /*
 motor control
 [
-    motor,     // 0x01: left,    0x02: right
-    direction, // 0x02: forward, 0x01: backward
+    0x99,
+    command,   // 0x01; set, 0x09: stop
+    motor,     // 0x01: left, 0x02: right, 0x03 both
+    direction, // 0x01: forward, 0x00: backward
     speed,     // between 0 and 100
-    0,
+    0x00,
+    0x88,
 ]
 */
-#define MOTOR_SPEED 20 // [0...100]
-uint8_t I2CBUF_MOTOR_LEFT_FWD[]   = {0x01,0x02,MOTOR_SPEED,0};
-uint8_t I2CBUF_MOTOR_LEFT_BACK[]  = {0x01,0x01,MOTOR_SPEED,0};
-uint8_t I2CBUF_MOTOR_LEFT_STOP[]  = {0x01,0x02,          0,0};
-uint8_t I2CBUF_MOTOR_RIGHT_FWD[]  = {0x02,0x02,MOTOR_SPEED,0};
-uint8_t I2CBUF_MOTOR_RIGHT_BACK[] = {0x02,0x01,MOTOR_SPEED,0};
-uint8_t I2CBUF_MOTOR_RIGHT_STOP[] = {0x02,0x02,          0,0};
+#define MOTOR_SPEED 50 // [0...100]
+uint8_t I2CBUF_MOTOR_LEFT_FWD[]   = {0x99,0x01,0x01,0x01,MOTOR_SPEED,0x00,0x88};
+uint8_t I2CBUF_MOTOR_LEFT_BACK[]  = {0x99,0x01,0x01,0x00,MOTOR_SPEED,0x00,0x88};
+
+uint8_t I2CBUF_MOTOR_RIGHT_FWD[]  = {0x99,0x01,0x02,0x01,MOTOR_SPEED,0x00,0x88};
+uint8_t I2CBUF_MOTOR_RIGHT_BACK[] = {0x99,0x01,0x02,0x00,MOTOR_SPEED,0x00,0x88};
+
+uint8_t I2CBUF_MOTORS_STOP[]      = {0x99,0x09,0x03,0x00,0x00,0x00,0x88};
 
 /*
 LED control
 [
-    led,       // 0x04: left,    0x08: right
-    r,         // 0..255?
-    g,         // 0..255?
-    b,         // 0..255?
+    0x99,
+    0x0f,
+    led,       // 0x02: left, 0x01: right, 0x03 both
+    r,
+    g,
+    b,
+    0x88,
 ]
 */
 #define LED_INTENSITY 0xff // [0x00...0xff]
-uint8_t I2CBUF_LED_LEFT_WHITE[]   = {0x04,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY};
-uint8_t I2CBUF_LED_LEFT_RED[]     = {0x04,LED_INTENSITY,         0x00,         0x00};
-uint8_t I2CBUF_LED_LEFT_GREEN[]   = {0x04,         0x00,LED_INTENSITY,         0x00};
-uint8_t I2CBUF_LED_LEFT_BLUE[]    = {0x04,         0x00,         0x00,LED_INTENSITY};
-uint8_t I2CBUF_LED_LEFT_OFF[]     = {0x04,         0x00,         0x00,         0x00};
-uint8_t I2CBUF_LED_RIGHT_WHITE[]  = {0x08,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY};
-uint8_t I2CBUF_LED_RIGHT_RED[]    = {0x08,LED_INTENSITY,         0x00,         0x00};
-uint8_t I2CBUF_LED_RIGHT_GREEN[]  = {0x08,         0x00,LED_INTENSITY,         0x00};
-uint8_t I2CBUF_LED_RIGHT_BLUE[]   = {0x08,         0x00,         0x00,LED_INTENSITY};
-uint8_t I2CBUF_LED_RIGHT_OFF[]    = {0x08,         0x00,         0x00,         0x00};
+uint8_t I2CBUF_LED_LEFT_WHITE[]   = {0x99,0x0f,0x02,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY,0x88};
+uint8_t I2CBUF_LED_LEFT_RED[]     = {0x99,0x0f,0x02,LED_INTENSITY,         0x00,         0x00,0x88};
+uint8_t I2CBUF_LED_LEFT_GREEN[]   = {0x99,0x0f,0x02,         0x00,LED_INTENSITY,         0x00,0x88};
+uint8_t I2CBUF_LED_LEFT_BLUE[]    = {0x99,0x0f,0x02,         0x00,         0x00,LED_INTENSITY,0x88};
+uint8_t I2CBUF_LED_LEFT_OFF[]     = {0x99,0x0f,0x02,         0x00,         0x00,         0x00,0x88};
+uint8_t I2CBUF_LED_RIGHT_WHITE[]  = {0x99,0x0f,0x01,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY,0x88};
+uint8_t I2CBUF_LED_RIGHT_RED[]    = {0x99,0x0f,0x01,LED_INTENSITY,         0x00,         0x00,0x88};
+uint8_t I2CBUF_LED_RIGHT_GREEN[]  = {0x99,0x0f,0x01,         0x00,LED_INTENSITY,         0x00,0x88};
+uint8_t I2CBUF_LED_RIGHT_BLUE[]   = {0x99,0x0f,0x01,         0x00,         0x00,LED_INTENSITY,0x88};
+uint8_t I2CBUF_LED_RIGHT_OFF[]    = {0x99,0x0f,0x01,         0x00,         0x00,         0x00,0x88};
 
 void i2c_init(void) {
    //  3           2            1           0
@@ -131,11 +128,11 @@ int main(void) {
     // motor left
     i2c_send(I2CBUF_MOTOR_LEFT_FWD,    sizeof(I2CBUF_MOTOR_LEFT_FWD));
     i2c_send(I2CBUF_MOTOR_LEFT_BACK,   sizeof(I2CBUF_MOTOR_LEFT_BACK));
-    i2c_send(I2CBUF_MOTOR_LEFT_STOP,   sizeof(I2CBUF_MOTOR_LEFT_STOP));
+    i2c_send(I2CBUF_MOTORS_STOP,       sizeof(I2CBUF_MOTORS_STOP));
     // motor right
     i2c_send(I2CBUF_MOTOR_RIGHT_FWD,   sizeof(I2CBUF_MOTOR_RIGHT_FWD));
     i2c_send(I2CBUF_MOTOR_RIGHT_BACK,  sizeof(I2CBUF_MOTOR_RIGHT_BACK));
-    i2c_send(I2CBUF_MOTOR_RIGHT_STOP,  sizeof(I2CBUF_MOTOR_RIGHT_STOP));
+    i2c_send(I2CBUF_MOTORS_STOP,       sizeof(I2CBUF_MOTORS_STOP));
     // led left
     i2c_send(I2CBUF_LED_LEFT_WHITE,    sizeof(I2CBUF_LED_LEFT_WHITE));
     i2c_send(I2CBUF_LED_LEFT_RED,      sizeof(I2CBUF_LED_LEFT_RED));
