@@ -1,150 +1,95 @@
+#include <string.h>
 #include "nrf52833.h"
 
 /*
 sources:
-    https://github.com/elecfreaks/pxt-Cutebot-Pro/blob/master/main.ts
-I2C:
-    same a Cutebot
+    https://wiki.elecfreaks.com/en/microbit/robot/xgo-robot-kit-v2/
+    https://github.com/elecfreaks/pxt-xgo/blob/master/main.ts
+    https://makecode.microbit.org/device/pins
+    
+    UART
+        tx==P2 onthe micro:bit silkscreen==P0.04 on the nRF (RING2 line on schematic)
+        rx==P1 onthe micro:bit silkscreen==P0.03 on the nRF (RING1 line on schematic)
+        baudrate: 115200
 */
 
-/*
-motor control
-[
-    0x99,
-    command,   // 0x01; set, 0x09: stop
-    motor,     // 0x01: left, 0x02: right, 0x03 both
-    direction, // 0x01: forward, 0x00: backward
-    speed,     // between 0 and 100
-    0x00,
-    0x88,
-]
-*/
-#define MOTOR_SPEED 50 // [0...100]
-uint8_t I2CBUF_MOTOR_LEFT_FWD[]   = {0x99,0x01,0x01,0x01,MOTOR_SPEED,0x00,0x88};
-uint8_t I2CBUF_MOTOR_LEFT_BACK[]  = {0x99,0x01,0x01,0x00,MOTOR_SPEED,0x00,0x88};
+uint8_t BUF_ACTION_SIT_DOWN[] = {0x55, 0x00, 0x09, 0x00, 0x3E, 0x0C, 0xAC, 0x00, 0xAA};
 
-uint8_t I2CBUF_MOTOR_RIGHT_FWD[]  = {0x99,0x01,0x02,0x01,MOTOR_SPEED,0x00,0x88};
-uint8_t I2CBUF_MOTOR_RIGHT_BACK[] = {0x99,0x01,0x02,0x00,MOTOR_SPEED,0x00,0x88};
-
-uint8_t I2CBUF_MOTORS_STOP[]      = {0x99,0x09,0x03,0x00,0x00,0x00,0x88};
-
-/*
-LED control
-[
-    0x99,
-    0x0f,
-    led,       // 0x02: left, 0x01: right, 0x03 both
-    r,
-    g,
-    b,
-    0x88,
-]
-*/
-#define LED_INTENSITY 0xff // [0x00...0xff]
-uint8_t I2CBUF_LED_LEFT_WHITE[]   = {0x99,0x0f,0x02,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY,0x88};
-uint8_t I2CBUF_LED_LEFT_RED[]     = {0x99,0x0f,0x02,LED_INTENSITY,         0x00,         0x00,0x88};
-uint8_t I2CBUF_LED_LEFT_GREEN[]   = {0x99,0x0f,0x02,         0x00,LED_INTENSITY,         0x00,0x88};
-uint8_t I2CBUF_LED_LEFT_BLUE[]    = {0x99,0x0f,0x02,         0x00,         0x00,LED_INTENSITY,0x88};
-uint8_t I2CBUF_LED_LEFT_OFF[]     = {0x99,0x0f,0x02,         0x00,         0x00,         0x00,0x88};
-uint8_t I2CBUF_LED_RIGHT_WHITE[]  = {0x99,0x0f,0x01,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY,0x88};
-uint8_t I2CBUF_LED_RIGHT_RED[]    = {0x99,0x0f,0x01,LED_INTENSITY,         0x00,         0x00,0x88};
-uint8_t I2CBUF_LED_RIGHT_GREEN[]  = {0x99,0x0f,0x01,         0x00,LED_INTENSITY,         0x00,0x88};
-uint8_t I2CBUF_LED_RIGHT_BLUE[]   = {0x99,0x0f,0x01,         0x00,         0x00,LED_INTENSITY,0x88};
-uint8_t I2CBUF_LED_RIGHT_OFF[]    = {0x99,0x0f,0x01,         0x00,         0x00,         0x00,0x88};
-
-void i2c_init(void) {
-   //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... ...A A: DIR:   0=Input
-    // .... .... .... .... .... .... .... ..B. B: INPUT: 1=Disconnect
-    // .... .... .... .... .... .... .... CC.. C: PULL:  0=Disabled
-    // .... .... .... .... .... .DDD .... .... D: DRIVE: 6=S0D1
-    // .... .... .... ..EE .... .... .... .... E: SENSE: 0=Disabled
-    // xxxx xxxx xxxx xx00 xxxx x110 xxxx 0010 
-    //    0    0    0    0    0    6    0    2 0x00000602
-    NRF_P0->PIN_CNF[26]           = 0x00000602; // SCL (P0.26)
-    NRF_P1->PIN_CNF[0]            = 0x00000602; // SDA (P1.00)
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... AAAA A: ENABLE: 5=Enabled
-    // xxxx xxxx xxxx xxxx xxxx xxxx xxxx 0101 
-    //    0    0    0    0    0    0    0    5 0x00000005
-    NRF_TWI0->ENABLE              = 0x00000005;
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... ...A AAAA A: PIN:    26 (P0.26)
-    // .... .... .... .... .... .... ..B. .... B: PORT:    0 (P0.26)
-    // C... .... .... .... .... .... .... .... C: CONNECT: 0=Connected
-    // 0xxx xxxx xxxx xxxx xxxx xxxx xx01 1010 
-    //    0    0    0    0    0    0    1    a 0x0000001a
-    NRF_TWI0->PSEL.SCL            = 0x0000001a;
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... ...A AAAA A: PIN:    00 (P1.00)
-    // .... .... .... .... .... .... ..B. .... B: PORT:    1 (P1.00)
-    // C... .... .... .... .... .... .... .... C: CONNECT: 0=Connected
-    // 0xxx xxxx xxxx xxxx xxxx xxxx xx10 0000 
-    //    0    0    0    0    0    0    2    0 0x00000020
-    NRF_TWI0->PSEL.SDA            = 0x00000020;
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA A: FREQUENCY: 0x01980000==K100==100 kbps
-    NRF_TWI0->FREQUENCY           = 0x01980000;
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .AAA AAAA A: ADDRESS: 16
-    // xxxx xxxx xxxx xxxx xxxx xxxx x001 0000 
-    //    0    0    0    0    0    0    1    0 0x00000010
-    NRF_TWI0->ADDRESS             = 0x10;
-}
-
-void i2c_send(uint8_t* buf, uint8_t buflen) {
-    uint8_t i;
-
-    i=0;
-    NRF_TWI0->TXD                 = buf[i];
-    NRF_TWI0->EVENTS_TXDSENT      = 0;
-    NRF_TWI0->TASKS_STARTTX       = 1;
-    i++;
-    while(i<buflen) {
-        while(NRF_TWI0->EVENTS_TXDSENT==0);
-        NRF_TWI0->EVENTS_TXDSENT  = 0;
-        NRF_TWI0->TXD             = buf[i];
-        i++;
-    }
-    while(NRF_TWI0->EVENTS_TXDSENT==0);
-    NRF_TWI0->TASKS_STOP     = 1;
-}
+uint8_t uartvars_txBuf[9];
+uint8_t uartvars_rxBuf[9];
 
 int main(void) {
     
-    i2c_init();
+    // start hfclock
+    NRF_CLOCK->EVENTS_HFCLKSTARTED     = 0;
+    NRF_CLOCK->TASKS_HFCLKSTART        = 0x00000001;
+    while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
-    // motor left
-    i2c_send(I2CBUF_MOTOR_LEFT_FWD,    sizeof(I2CBUF_MOTOR_LEFT_FWD));
-    i2c_send(I2CBUF_MOTOR_LEFT_BACK,   sizeof(I2CBUF_MOTOR_LEFT_BACK));
-    i2c_send(I2CBUF_MOTORS_STOP,       sizeof(I2CBUF_MOTORS_STOP));
-    // motor right
-    i2c_send(I2CBUF_MOTOR_RIGHT_FWD,   sizeof(I2CBUF_MOTOR_RIGHT_FWD));
-    i2c_send(I2CBUF_MOTOR_RIGHT_BACK,  sizeof(I2CBUF_MOTOR_RIGHT_BACK));
-    i2c_send(I2CBUF_MOTORS_STOP,       sizeof(I2CBUF_MOTORS_STOP));
-    // led left
-    i2c_send(I2CBUF_LED_LEFT_WHITE,    sizeof(I2CBUF_LED_LEFT_WHITE));
-    i2c_send(I2CBUF_LED_LEFT_RED,      sizeof(I2CBUF_LED_LEFT_RED));
-    i2c_send(I2CBUF_LED_LEFT_GREEN,    sizeof(I2CBUF_LED_LEFT_GREEN));
-    i2c_send(I2CBUF_LED_LEFT_BLUE,     sizeof(I2CBUF_LED_LEFT_BLUE));
-    i2c_send(I2CBUF_LED_LEFT_OFF,      sizeof(I2CBUF_LED_LEFT_OFF));
-    // led right
-    i2c_send(I2CBUF_LED_RIGHT_WHITE,   sizeof(I2CBUF_LED_RIGHT_WHITE));
-    i2c_send(I2CBUF_LED_RIGHT_RED,     sizeof(I2CBUF_LED_RIGHT_RED));
-    i2c_send(I2CBUF_LED_RIGHT_GREEN,   sizeof(I2CBUF_LED_RIGHT_GREEN));
-    i2c_send(I2CBUF_LED_RIGHT_BLUE,    sizeof(I2CBUF_LED_RIGHT_BLUE));
-    i2c_send(I2CBUF_LED_RIGHT_OFF,     sizeof(I2CBUF_LED_RIGHT_OFF));
+    // configure
+    NRF_UARTE0->RXD.PTR                = (uint32_t)uartvars_rxBuf;
+    NRF_UARTE0->RXD.MAXCNT             = sizeof(uartvars_rxBuf);
+    NRF_UARTE0->TXD.PTR                = (uint32_t)uartvars_txBuf;
+    NRF_UARTE0->TXD.MAXCNT             = sizeof(uartvars_txBuf);
+    NRF_UARTE0->PSEL.TXD               = 0x00000004; // 0x00000004==P0.04
+    NRF_UARTE0->PSEL.RXD               = 0x00000003; // 0x00000003==P0.03
+    NRF_UARTE0->CONFIG                 = 0x00000000; // 0x00000000==no flow control, no parity bits, 1 stop bit
+    NRF_UARTE0->BAUDRATE               = 0x01D7E000; // 0x01D7E000==Baud115200
+    //  3           2            1           0
+    // 1098 7654 3210 9876 5432 1098 7654 3210
+    // .... .... .... .... .... .... ..C. .... C: ENDRX_STARTRX
+    // .... .... .... .... .... .... .D.. .... D: ENDRX_STOPRX
+    // xxxx xxxx xxxx xxxx xxxx xxxx xx1x xxxx 
+    //    0    0    0    0    0    0    2    0 0x00000020
+    NRF_UARTE0->SHORTS                 = 0x00000020;
+    //  3           2            1           0
+    // 1098 7654 3210 9876 5432 1098 7654 3210
+    // .... .... .... .... .... .... .... ...A A: CTS
+    // .... .... .... .... .... .... .... ..B. B: NCTS
+    // .... .... .... .... .... .... .... .C.. C: RXDRDY
+    // .... .... .... .... .... .... ...D .... D: ENDRX
+    // .... .... .... .... .... .... E... .... E: TXDRDY
+    // .... .... .... .... .... ...F .... .... F: ENDTX
+    // .... .... .... .... .... ..G. .... .... G: ERROR
+    // .... .... .... ..H. .... .... .... .... H: RXTO
+    // .... .... .... I... .... .... .... .... I: RXSTARTED
+    // .... .... ...J .... .... .... .... .... J: TXSTARTED
+    // .... .... .L.. .... .... .... .... .... L: TXSTOPPED
+    // xxxx xxxx x0x0 0x0x xxxx xx01 0xx1 x000 
+    //    0    0    0    0    0    1    1    0 0x00000110
+    NRF_UARTE0->INTENSET               = 0x00000110;
+    NRF_UARTE0->ENABLE                 = 0x00000008; // 0x00000008==enable
+    
+    // enable interrupts
+    NVIC_SetPriority(UARTE0_UART0_IRQn, 1);
+    NVIC_ClearPendingIRQ(UARTE0_UART0_IRQn);
+    NVIC_EnableIRQ(UARTE0_UART0_IRQn);
+
+    // start receiving
+    NRF_UARTE0->EVENTS_RXSTARTED       = 0;
+    NRF_UARTE0->TASKS_STARTRX          = 0x00000001; // 0x00000001==start RX state machine; read received byte from RXD register
+    while (NRF_UARTE0->EVENTS_RXSTARTED == 0);
+
+    memcpy(uartvars_txBuf,BUF_ACTION_SIT_DOWN,sizeof(BUF_ACTION_SIT_DOWN));
+
+    NRF_UARTE0->TASKS_STARTTX          = 0x00000001;
 
     while(1);
+}
+
+void UARTE0_UART0_IRQHandler(void) {
+
+    if (NRF_UARTE0->EVENTS_ENDTX == 0x00000001) {
+        // byte sent to computer
+
+        // clear
+        NRF_UARTE0->EVENTS_ENDTX = 0x00000000;
+        
+    }
+
+    if (NRF_UARTE0->EVENTS_ENDRX == 0x00000001) {
+        // byte received from computer
+
+        // clear
+        NRF_UARTE0->EVENTS_ENDRX = 0x00000000;
+    }
 }
