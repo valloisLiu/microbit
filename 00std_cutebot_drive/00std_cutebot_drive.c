@@ -15,23 +15,45 @@ I2C:
         freq: 100000
         SCL==micro:bit pin 19 (header)==P0.26 (nRF)
         SDA==micro:bit pin 20 (header)==P1.00 (nRF)
-    address: 0x10,
-    payload: [
-        motor,     // 0x01: left,    0x02: right
-        direction, // 0x02: forward, 0x01: backward
-        speed,     // between 0 and 100
-        0,
-    ]
 */
 
-#define SPEED 20
+/*
+motor control
+[
+    motor,     // 0x01: left,    0x02: right
+    direction, // 0x02: forward, 0x01: backward
+    speed,     // between 0 and 100
+    0,
+]
+*/
+#define MOTOR_SPEED 20 // [0...100]
+uint8_t I2CBUF_MOTOR_LEFT_FWD[]   = {0x01,0x02,MOTOR_SPEED,0};
+uint8_t I2CBUF_MOTOR_LEFT_BACK[]  = {0x01,0x01,MOTOR_SPEED,0};
+uint8_t I2CBUF_MOTOR_LEFT_STOP[]  = {0x01,0x02,          0,0};
+uint8_t I2CBUF_MOTOR_RIGHT_FWD[]  = {0x02,0x02,MOTOR_SPEED,0};
+uint8_t I2CBUF_MOTOR_RIGHT_BACK[] = {0x02,0x01,MOTOR_SPEED,0};
+uint8_t I2CBUF_MOTOR_RIGHT_STOP[] = {0x02,0x02,          0,0};
 
-uint8_t BUF_LEFT_FWD[]   = {0x01,0x02,SPEED,0};
-uint8_t BUF_LEFT_BACK[]  = {0x01,0x01,SPEED,0};
-uint8_t BUF_LEFT_STOP[]  = {0x01,0x02,    0,0};
-uint8_t BUF_RIGHT_FWD[]  = {0x02,0x02,SPEED,0};
-uint8_t BUF_RIGHT_BACK[] = {0x02,0x01,SPEED,0};
-uint8_t BUF_RIGHT_STOP[] = {0x02,0x02,    0,0};
+/*
+LED control
+[
+    led,       // 0x04: left,    0x08: right
+    r,         // 0..255?
+    g,         // 0..255?
+    b,         // 0..255?
+]
+*/
+#define LED_INTENSITY 0xff // [0x00...0xff]
+uint8_t I2CBUF_LED_LEFT_WHITE[]   = {0x04,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY};
+uint8_t I2CBUF_LED_LEFT_RED[]     = {0x04,LED_INTENSITY,         0x00,         0x00};
+uint8_t I2CBUF_LED_LEFT_GREEN[]   = {0x04,         0x00,LED_INTENSITY,         0x00};
+uint8_t I2CBUF_LED_LEFT_BLUE[]    = {0x04,         0x00,         0x00,LED_INTENSITY};
+uint8_t I2CBUF_LED_LEFT_OFF[]     = {0x04,         0x00,         0x00,         0x00};
+uint8_t I2CBUF_LED_RIGHT_WHITE[]  = {0x08,LED_INTENSITY,LED_INTENSITY,LED_INTENSITY};
+uint8_t I2CBUF_LED_RIGHT_RED[]    = {0x08,LED_INTENSITY,         0x00,         0x00};
+uint8_t I2CBUF_LED_RIGHT_GREEN[]  = {0x08,         0x00,LED_INTENSITY,         0x00};
+uint8_t I2CBUF_LED_RIGHT_BLUE[]   = {0x08,         0x00,         0x00,LED_INTENSITY};
+uint8_t I2CBUF_LED_RIGHT_OFF[]    = {0x08,         0x00,         0x00,         0x00};
 
 void i2c_init(void) {
    //  3           2            1           0
@@ -81,7 +103,7 @@ void i2c_init(void) {
     // .... .... .... .... .... .... .AAA AAAA A: ADDRESS: 16
     // xxxx xxxx xxxx xxxx xxxx xxxx x001 0000 
     //    0    0    0    0    0    0    1    0 0x00000010
-    NRF_TWI0->ADDRESS             = 0x00000010;
+    NRF_TWI0->ADDRESS             = 0x10;
 }
 
 void i2c_send(uint8_t* buf, uint8_t buflen) {
@@ -105,12 +127,27 @@ void i2c_send(uint8_t* buf, uint8_t buflen) {
 int main(void) {
     
     i2c_init();
-    i2c_send(BUF_LEFT_FWD,  sizeof(BUF_LEFT_FWD));
-    i2c_send(BUF_LEFT_BACK, sizeof(BUF_LEFT_BACK));
-    i2c_send(BUF_LEFT_STOP, sizeof(BUF_LEFT_STOP));
-    i2c_send(BUF_RIGHT_FWD, sizeof(BUF_RIGHT_FWD));
-    i2c_send(BUF_RIGHT_BACK,sizeof(BUF_RIGHT_BACK));
-    i2c_send(BUF_RIGHT_STOP,sizeof(BUF_RIGHT_STOP));
+
+    // motor left
+    i2c_send(I2CBUF_MOTOR_LEFT_FWD,    sizeof(I2CBUF_MOTOR_LEFT_FWD));
+    i2c_send(I2CBUF_MOTOR_LEFT_BACK,   sizeof(I2CBUF_MOTOR_LEFT_BACK));
+    i2c_send(I2CBUF_MOTOR_LEFT_STOP,   sizeof(I2CBUF_MOTOR_LEFT_STOP));
+    // motor right
+    i2c_send(I2CBUF_MOTOR_RIGHT_FWD,   sizeof(I2CBUF_MOTOR_RIGHT_FWD));
+    i2c_send(I2CBUF_MOTOR_RIGHT_BACK,  sizeof(I2CBUF_MOTOR_RIGHT_BACK));
+    i2c_send(I2CBUF_MOTOR_RIGHT_STOP,  sizeof(I2CBUF_MOTOR_RIGHT_STOP));
+    // led left
+    i2c_send(I2CBUF_LED_LEFT_WHITE,    sizeof(I2CBUF_LED_LEFT_WHITE));
+    i2c_send(I2CBUF_LED_LEFT_RED,      sizeof(I2CBUF_LED_LEFT_RED));
+    i2c_send(I2CBUF_LED_LEFT_GREEN,    sizeof(I2CBUF_LED_LEFT_GREEN));
+    i2c_send(I2CBUF_LED_LEFT_BLUE,     sizeof(I2CBUF_LED_LEFT_BLUE));
+    i2c_send(I2CBUF_LED_LEFT_OFF,      sizeof(I2CBUF_LED_LEFT_OFF));
+    // led right
+    i2c_send(I2CBUF_LED_RIGHT_WHITE,   sizeof(I2CBUF_LED_RIGHT_WHITE));
+    i2c_send(I2CBUF_LED_RIGHT_RED,     sizeof(I2CBUF_LED_RIGHT_RED));
+    i2c_send(I2CBUF_LED_RIGHT_GREEN,   sizeof(I2CBUF_LED_RIGHT_GREEN));
+    i2c_send(I2CBUF_LED_RIGHT_BLUE,    sizeof(I2CBUF_LED_RIGHT_BLUE));
+    i2c_send(I2CBUF_LED_RIGHT_OFF,     sizeof(I2CBUF_LED_RIGHT_OFF));
 
     while(1);
 }
