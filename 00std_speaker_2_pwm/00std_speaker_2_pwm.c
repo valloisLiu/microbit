@@ -5,6 +5,8 @@
 // we use a prescaler of 4, so the PWM counter runs at 16MHz/4=4MHz
 // period = (4000000/freq_Hz)
 
+#define NOTE_NONE      0 // 246.94 Hz
+#define NOTE_SI_2  16198 // 246.94 Hz
 #define NOTE_DO_3  15289 // 261.63 Hz
 #define NOTE_RE_3  13621 // 293.66 Hz
 #define NOTE_MI_3  12135 // 329.63 Hz
@@ -14,9 +16,29 @@
 #define NOTE_SI_3   8099 // 493.88 Hz
 #define NOTE_DO_4   7645 // 523.25 Hz
 
-uint16_t pwm_comp[1] = {6000};
+uint16_t song[] = {
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
+};
+uint16_t beat;
 
-int main(void) {
+uint16_t pwm_comp[1];
+
+void pwm_init(void) {
     
     // configure P0.00 as output
     //  3           2            1           0
@@ -59,8 +81,6 @@ int main(void) {
     // 0xxx xxxx xxxx xxxx xxxx xxxx xxxx x000 
     //    0    0    0    0    0    0    0    0 0x00000000
     NRF_PWM0->PRESCALER           = 2;
-    
-    NRF_PWM0->COUNTERTOP          = 16000; // 16000@16MHz = 1kHz
 
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
@@ -92,8 +112,63 @@ int main(void) {
     // 0xxx xxxx 0000 0000 0000 0000 0000 0000 
     //    0    0    0    0    0    0    0    0 0x00000000
     NRF_PWM0->SEQ[0].ENDDELAY     = 0;
+}
 
+void pwm_setperiod(uint16_t period) {
+
+    if(NRF_PWM0->EVENTS_SEQSTARTED[0]==1) {
+        NRF_PWM0->EVENTS_STOPPED  = 0;
+        NRF_PWM0->TASKS_STOP      = 0x00000001;
+        while(NRF_PWM0->EVENTS_STOPPED==0);
+    }
+
+    NRF_PWM0->COUNTERTOP          = period;
+    pwm_comp[0]                   = period/2;
+
+    NRF_PWM0->EVENTS_SEQSTARTED[0]=0;
     NRF_PWM0->TASKS_SEQSTART[0]   = 0x00000001;
+    while(NRF_PWM0->EVENTS_SEQSTARTED[0]==0);
+}
+
+void rtc_init(void) {
     
+    // configure/start the RTC
+    // 1098 7654 3210 9876 5432 1098 7654 3210
+    // xxxx xxxx xxxx FEDC xxxx xxxx xxxx xxBA (C=compare 0)
+    // 0000 0000 0000 0001 0000 0000 0000 0000 
+    //    0    0    0    1    0    0    0    0 0x00010000
+    NRF_RTC0->EVTENSET                 = 0x00010000;       // enable compare 0 event routing
+    NRF_RTC0->INTENSET                 = 0x00010000;       // enable compare 0 interrupts
+
+    // enable interrupts
+    NVIC_SetPriority(RTC0_IRQn, 1);
+    NVIC_ClearPendingIRQ(RTC0_IRQn);
+    NVIC_EnableIRQ(RTC0_IRQn);
+
+    // have RTC tick every second
+    NRF_RTC0->CC[0]                    = 1317;             // 32768==1 s --> 1317==40.1ms
+    NRF_RTC0->TASKS_START              = 0x00000001;       // start RTC0
+}
+    
+int main(void) {
+    pwm_init();
+    rtc_init();
+
     while(1);
+}
+
+void RTC0_IRQHandler(void) {
+    
+    if (NRF_RTC0->EVENTS_COMPARE[0] == 0x00000001 ) {
+        // handle compare[0]
+
+        // clear flag
+        NRF_RTC0->EVENTS_COMPARE[0]    = 0x00000000;
+
+        // clear COUNTER
+        NRF_RTC0->TASKS_CLEAR          = 0x00000001;
+
+        pwm_setperiod(song[beat]);
+        beat = (beat+1)%(sizeof(song) / sizeof(uint16_t));
+    }
 }
