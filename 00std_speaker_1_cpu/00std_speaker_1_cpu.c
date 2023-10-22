@@ -1,8 +1,14 @@
 #include "nrf52833.h"
 
+uint16_t waitime = 0xff;
+
 void wait(void) {
     volatile uint32_t a;
-    for (a=0; a<0xffff;a++);
+    for (a=0; a<waitime;a++);
+    waitime++;
+    if (waitime==0x0900) {
+        waitime = 0xff;
+    }
 }
 
 int main(void) {
