@@ -27,7 +27,7 @@ motor control
 ]
 */
 #define MOTOR_SPEED 20 // [0...100]
-uint8_t I2CBUF_MOTOR_LEFT_FWD[]   = {0x99,0x01,0x01,0x01,100,0x00,0x88};
+uint8_t I2CBUF_MOTOR_LEFT_FWD[]   = {0x01,0x02,MOTOR_SPEED,0};
 uint8_t I2CBUF_MOTOR_LEFT_BACK[]  = {0x01,0x01,MOTOR_SPEED,0};
 uint8_t I2CBUF_MOTOR_LEFT_STOP[]  = {0x01,0x02,          0,0};
 uint8_t I2CBUF_MOTOR_RIGHT_FWD[]  = {0x02,0x02,MOTOR_SPEED,0};
@@ -130,7 +130,6 @@ int main(void) {
 
     // motor left
     i2c_send(I2CBUF_MOTOR_LEFT_FWD,    sizeof(I2CBUF_MOTOR_LEFT_FWD));
-    /*
     i2c_send(I2CBUF_MOTOR_LEFT_BACK,   sizeof(I2CBUF_MOTOR_LEFT_BACK));
     i2c_send(I2CBUF_MOTOR_LEFT_STOP,   sizeof(I2CBUF_MOTOR_LEFT_STOP));
     // motor right
@@ -149,7 +148,6 @@ int main(void) {
     i2c_send(I2CBUF_LED_RIGHT_GREEN,   sizeof(I2CBUF_LED_RIGHT_GREEN));
     i2c_send(I2CBUF_LED_RIGHT_BLUE,    sizeof(I2CBUF_LED_RIGHT_BLUE));
     i2c_send(I2CBUF_LED_RIGHT_OFF,     sizeof(I2CBUF_LED_RIGHT_OFF));
-    */
 
     while(1);
 }
