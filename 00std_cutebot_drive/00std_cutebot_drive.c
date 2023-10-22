@@ -1,174 +1,116 @@
 #include "nrf52833.h"
 
-// period = (16000000/freq_Hz)
+/*
+sources:
+    https://github.com/elecfreaks/circuitpython_cutebot/blob/main/cutebot.py
+    https://github.com/Krakenus/microbit-cutebot-micropython/blob/master/cutebot.py
+    https://github.com/bbcmicrobit/micropython/blob/master/source/microbit/microbiti2c.cpp
+    https://microbit-micropython.readthedocs.io/en/latest/i2c.html#
+    https://makecode.microbit.org/device/pins
 
-// we use a prescaler of 4, so the PWM counter runs at 16MHz/4=4MHz
-// period = (4000000/freq_Hz)
+I2C:
+    config:
+        7-bit addressing
+    pins:
+        freq: 100000
+        SCL==micro:bit pin 19 (header)==P0.26 (nRF)
+        SDA==micro:bit pin 20 (header)==P1.00 (nRF)
+    address: 0x10,
+    payload: [
+        motor,     // 0x01: left,    0x02: right
+        direction, // 0x02: forward, 0x01: backward
+        speed,     // between 0 and 100
+        0,
+    ]
+*/
 
-#define NOTE_NONE      0 // 246.94 Hz
-#define NOTE_SI_2  16198 // 246.94 Hz
-#define NOTE_DO_3  15289 // 261.63 Hz
-#define NOTE_RE_3  13621 // 293.66 Hz
-#define NOTE_MI_3  12135 // 329.63 Hz
-#define NOTE_FA_3  11454 // 349.23 Hz
-#define NOTE_SOL_3 10204 // 392.00 Hz
-#define NOTE_LA_3   9091 // 440.00 Hz
-#define NOTE_SI_3   8099 // 493.88 Hz
-#define NOTE_DO_4   7645 // 523.25 Hz
+#define SPEED 20
 
-uint16_t song[] = {
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_DO_3, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_LA_3,  NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-    NOTE_SI_2, NOTE_MI_3, NOTE_SOL_3, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE, NOTE_NONE,
-};
-uint16_t beat;
+uint8_t BUF_LEFT_FWD[]   = {0x01,0x02,SPEED,0};
+uint8_t BUF_LEFT_BACK[]  = {0x01,0x01,SPEED,0};
+uint8_t BUF_LEFT_STOP[]  = {0x01,0x02,    0,0};
+uint8_t BUF_RIGHT_FWD[]  = {0x02,0x02,SPEED,0};
+uint8_t BUF_RIGHT_BACK[] = {0x02,0x01,SPEED,0};
+uint8_t BUF_RIGHT_STOP[] = {0x02,0x02,    0,0};
 
-uint16_t pwm_comp[1];
-
-void pwm_init(void) {
-    
-    // configure P0.00 as output
-    //  3           2            1           0
+void i2c_init(void) {
+   //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... ...A A: DIR:     1=Output
-    // .... .... .... .... .... .... .... ..B. B: INPUT:   1=Disconnect
-    // .... .... .... .... .... .... .... CC.. C: PULL:    0=Disabled
-    // .... .... .... .... .... .DDD .... .... D: DRIVE:   0=S0S1
-    // .... .... .... ..EE .... .... .... .... E: SENSE:   0=Disabled
-    // xxxx xxxx xxxx xx00 xxxx xxxx xxxx 0011 
-    //    0    0    0    0    0    0    0    3 0x00000003
-    NRF_P0->PIN_CNF[0]            = 0x00000003;
+    // .... .... .... .... .... .... .... ...A A: DIR:   0=Input
+    // .... .... .... .... .... .... .... ..B. B: INPUT: 1=Disconnect
+    // .... .... .... .... .... .... .... CC.. C: PULL:  0=Disabled
+    // .... .... .... .... .... .DDD .... .... D: DRIVE: 6=S0D1
+    // .... .... .... ..EE .... .... .... .... E: SENSE: 0=Disabled
+    // xxxx xxxx xxxx xx00 xxxx x110 xxxx 0010 
+    //    0    0    0    0    0    6    0    2 0x00000602
+    NRF_P0->PIN_CNF[26]           = 0x00000602; // SCL (P0.26)
+    NRF_P1->PIN_CNF[0]            = 0x00000602; // SDA (P1.00)
 
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... ...A AAAA A: PIN:      00 (P0.00)
-    // .... .... .... .... .... .... ..B. .... B: PORT:     0  (P0.00)
-    // C... .... .... .... .... .... .... .... C: CONNECT:  0=Connected
-    // 0xxx xxxx xxxx xxxx xxxx xxxx xx00 0000 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->PSEL.OUT[0]         = 0x00000000;
+    // .... .... .... .... .... .... .... AAAA A: ENABLE: 5=Enabled
+    // xxxx xxxx xxxx xxxx xxxx xxxx xxxx 0101 
+    //    0    0    0    0    0    0    0    5 0x00000005
+    NRF_TWI0->ENABLE              = 0x00000005;
 
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... ...A A: ENABLE:   1=Enabled
-    // 0xxx xxxx xxxx xxxx xxxx xxxx xxxx xxx1 
-    //    0    0    0    0    0    0    0    1 0x00000001
-    NRF_PWM0->ENABLE              = 0x00000001;
+    // .... .... .... .... .... .... ...A AAAA A: PIN:    26 (P0.26)
+    // .... .... .... .... .... .... ..B. .... B: PORT:    0 (P0.26)
+    // C... .... .... .... .... .... .... .... C: CONNECT: 0=Connected
+    // 0xxx xxxx xxxx xxxx xxxx xxxx xx01 1010 
+    //    0    0    0    0    0    0    1    a 0x0000001a
+    NRF_TWI0->PSEL.SCL            = 0x0000001a;
 
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... ...A A: UPDOWN:   0=Up
-    // 0xxx xxxx xxxx xxxx xxxx xxxx xxxx xxx0 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->MODE                = 0x00000000;
+    // .... .... .... .... .... .... ...A AAAA A: PIN:    00 (P1.00)
+    // .... .... .... .... .... .... ..B. .... B: PORT:    1 (P1.00)
+    // C... .... .... .... .... .... .... .... C: CONNECT: 0=Connected
+    // 0xxx xxxx xxxx xxxx xxxx xxxx xx10 0000 
+    //    0    0    0    0    0    0    2    0 0x00000020
+    NRF_TWI0->PSEL.SDA            = 0x00000020;
 
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... .AAA A: PRESCALER: 0=DIV_1
-    // 0xxx xxxx xxxx xxxx xxxx xxxx xxxx x000 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->PRESCALER           = 2;
+    // AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA A: FREQUENCY: 0x01980000==K100==100 kbps
+    NRF_TWI0->FREQUENCY           = 0x01980000;
 
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... AAAA AAAA AAAA AAAA A: CNT:      0=Disabled
-    // 0xxx xxxx xxxx xxxx 0000 0000 0000 0000 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->LOOP                = 0x00000000;
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... .... .... .... .... .... ..AA A: LOAD:     0=Common
-    // .... .... .... .... .... ...B .... .... B: MODE:     0=RefreshCount
-    // 0xxx xxxx xxxx xxxx xxxx xxx0 xxxx xx00 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->DECODER             = 0x00000000;
-    NRF_PWM0->SEQ[0].PTR          = (uint32_t)(pwm_comp);
-    NRF_PWM0->SEQ[0].CNT          = (sizeof(pwm_comp) / sizeof(uint16_t));
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... AAAA AAAA AAAA AAAA AAAA AAAA A: CNT:      0=Continuous
-    // 0xxx xxxx 0000 0000 0000 0000 0000 0000 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->SEQ[0].REFRESH      = 0;
-
-    //  3           2            1           0
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // .... .... AAAA AAAA AAAA AAAA AAAA AAAA A: CNT
-    // 0xxx xxxx 0000 0000 0000 0000 0000 0000 
-    //    0    0    0    0    0    0    0    0 0x00000000
-    NRF_PWM0->SEQ[0].ENDDELAY     = 0;
+    // .... .... .... .... .... .... .AAA AAAA A: ADDRESS: 16
+    // xxxx xxxx xxxx xxxx xxxx xxxx x001 0000 
+    //    0    0    0    0    0    0    1    0 0x00000010
+    NRF_TWI0->ADDRESS             = 0x00000010;
 }
 
-void pwm_setperiod(uint16_t period) {
+void i2c_send(uint8_t* buf, uint8_t buflen) {
+    uint8_t i;
 
-    if(NRF_PWM0->EVENTS_SEQSTARTED[0]==1) {
-        NRF_PWM0->EVENTS_STOPPED  = 0;
-        NRF_PWM0->TASKS_STOP      = 0x00000001;
-        while(NRF_PWM0->EVENTS_STOPPED==0);
+    i=0;
+    NRF_TWI0->TXD                 = buf[i];
+    NRF_TWI0->EVENTS_TXDSENT      = 0;
+    NRF_TWI0->TASKS_STARTTX       = 1;
+    i++;
+    while(i<buflen) {
+        while(NRF_TWI0->EVENTS_TXDSENT==0);
+        NRF_TWI0->EVENTS_TXDSENT  = 0;
+        NRF_TWI0->TXD             = buf[i];
+        i++;
     }
-
-    NRF_PWM0->COUNTERTOP          = period;
-    pwm_comp[0]                   = period/2;
-
-    NRF_PWM0->EVENTS_SEQSTARTED[0]=0;
-    NRF_PWM0->TASKS_SEQSTART[0]   = 0x00000001;
-    while(NRF_PWM0->EVENTS_SEQSTARTED[0]==0);
+    while(NRF_TWI0->EVENTS_TXDSENT==0);
+    NRF_TWI0->TASKS_STOP     = 1;
 }
 
-void rtc_init(void) {
-    
-    // configure/start the RTC
-    // 1098 7654 3210 9876 5432 1098 7654 3210
-    // xxxx xxxx xxxx FEDC xxxx xxxx xxxx xxBA (C=compare 0)
-    // 0000 0000 0000 0001 0000 0000 0000 0000 
-    //    0    0    0    1    0    0    0    0 0x00010000
-    NRF_RTC0->EVTENSET                 = 0x00010000;       // enable compare 0 event routing
-    NRF_RTC0->INTENSET                 = 0x00010000;       // enable compare 0 interrupts
-
-    // enable interrupts
-    NVIC_SetPriority(RTC0_IRQn, 1);
-    NVIC_ClearPendingIRQ(RTC0_IRQn);
-    NVIC_EnableIRQ(RTC0_IRQn);
-
-    // have RTC tick every second
-    NRF_RTC0->CC[0]                    = 1317;             // 32768==1 s --> 1317==40.1ms
-    NRF_RTC0->TASKS_START              = 0x00000001;       // start RTC0
-}
-    
 int main(void) {
-    pwm_init();
-    rtc_init();
+    
+    i2c_init();
+    i2c_send(BUF_LEFT_FWD,  sizeof(BUF_LEFT_FWD));
+    i2c_send(BUF_LEFT_BACK, sizeof(BUF_LEFT_BACK));
+    i2c_send(BUF_LEFT_STOP, sizeof(BUF_LEFT_STOP));
+    i2c_send(BUF_RIGHT_FWD, sizeof(BUF_RIGHT_FWD));
+    i2c_send(BUF_RIGHT_BACK,sizeof(BUF_RIGHT_BACK));
+    i2c_send(BUF_RIGHT_STOP,sizeof(BUF_RIGHT_STOP));
 
     while(1);
-}
-
-void RTC0_IRQHandler(void) {
-    
-    if (NRF_RTC0->EVENTS_COMPARE[0] == 0x00000001 ) {
-        // handle compare[0]
-
-        // clear flag
-        NRF_RTC0->EVENTS_COMPARE[0]    = 0x00000000;
-
-        // clear COUNTER
-        NRF_RTC0->TASKS_CLEAR          = 0x00000001;
-
-        pwm_setperiod(song[beat]);
-        beat = (beat+1)%(sizeof(song) / sizeof(uint16_t));
-    }
 }
