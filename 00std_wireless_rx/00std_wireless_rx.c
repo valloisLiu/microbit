@@ -1,126 +1,44 @@
+#include <nrf.h>
 #include "nrf52833.h"
 
-#define ROW1_DISCONNECT()    (NRF_P0->PIN_CNF[21]     = 0x00000002 )          // P0.21
-#define ROW2_DISCONNECT()    (NRF_P0->PIN_CNF[22]     = 0x00000002 )          // P0.22
-#define ROW3_DISCONNECT()    (NRF_P0->PIN_CNF[15]     = 0x00000002 )          // P0.15
-#define ROW4_DISCONNECT()    (NRF_P0->PIN_CNF[24]     = 0x00000002 )          // P0.24
-#define ROW5_DISCONNECT()    (NRF_P0->PIN_CNF[19]     = 0x00000002 )          // P0.19
-
-#define ROW1_OUTPUT()        (NRF_P0->PIN_CNF[21]     = 0x00000003 )          // P0.21
-#define ROW2_OUTPUT()        (NRF_P0->PIN_CNF[22]     = 0x00000003 )          // P0.22
-#define ROW3_OUTPUT()        (NRF_P0->PIN_CNF[15]     = 0x00000003 )          // P0.15
-#define ROW4_OUTPUT()        (NRF_P0->PIN_CNF[24]     = 0x00000003 )          // P0.24
-#define ROW5_OUTPUT()        (NRF_P0->PIN_CNF[19]     = 0x00000003 )          // P0.19
-
-#define ROW1_HIGH()          (NRF_P0->OUTSET          = (0x00000001 << 21) )   // P0.21
-#define ROW2_HIGH()          (NRF_P0->OUTSET          = (0x00000001 << 22) )   // P0.22
-#define ROW3_HIGH()          (NRF_P0->OUTSET          = (0x00000001 << 15) )   // P0.15
-#define ROW4_HIGH()          (NRF_P0->OUTSET          = (0x00000001 << 24) )   // P0.24
-#define ROW5_HIGH()          (NRF_P0->OUTSET          = (0x00000001 << 19) )   // P0.19
-                        
-#define COL1_DISCONNECT()    (NRF_P0->PIN_CNF[28]     = 0x00000002 )           // P0.28
-#define COL2_DISCONNECT()    (NRF_P0->PIN_CNF[11]     = 0x00000002 )           // P0.11
-#define COL3_DISCONNECT()    (NRF_P0->PIN_CNF[31]     = 0x00000002 )           // P0.31
-#define COL4_DISCONNECT()    (NRF_P1->PIN_CNF[05]     = 0x00000002 )           // P1.05
-#define COL5_DISCONNECT()    (NRF_P0->PIN_CNF[30]     = 0x00000002 )           // P0.30
-
-#define COL1_OUTPUT()        (NRF_P0->PIN_CNF[28]     = 0x00000003 )           // P0.28
-#define COL2_OUTPUT()        (NRF_P0->PIN_CNF[11]     = 0x00000003 )           // P0.11
-#define COL3_OUTPUT()        (NRF_P0->PIN_CNF[31]     = 0x00000003 )           // P0.31
-#define COL4_OUTPUT()        (NRF_P1->PIN_CNF[05]     = 0x00000003 )           // P1.05
-#define COL5_OUTPUT()        (NRF_P0->PIN_CNF[30]     = 0x00000003 )           // P0.30
-                             
-#define COL1_LOW()           (NRF_P0->OUTCLR          = (0x00000001 << 28) )   // P0.28
-#define COL2_LOW()           (NRF_P0->OUTCLR          = (0x00000001 << 11) )   // P0.11
-#define COL3_LOW()           (NRF_P0->OUTCLR          = (0x00000001 << 31) )   // P0.31
-#define COL4_LOW()           (NRF_P1->OUTCLR          = (0x00000001 << 05) )   // P1.05
-#define COL5_LOW()           (NRF_P0->OUTCLR          = (0x00000001 << 30) )   // P0.30
-
-typedef enum {
-    LED11,LED12,LED13,LED14,LED15,
-    LED21,LED22,LED23,LED24,LED25,
-    LED31,LED32,LED33,LED34,LED35,
-    LED41,LED42,LED43,LED44,LED45,
-    LED51,LED52,LED53,LED54,LED55
-} led_id_t;
-
-/**
-     12345
-   1 .....
-   2 .#.#.
-   3 .....
-   4 #...#
-   5 .###.
-*/
-
-const led_id_t LEDS_SMILEY[] = {
-   
-          LED22,      LED24,
-    
-    LED41,                  LED45,
-          LED52,LED53,LED54
-};
-
-void leds_all_off(void) {
-   
-    ROW1_DISCONNECT();
-    ROW2_DISCONNECT();
-    ROW3_DISCONNECT();
-    ROW4_DISCONNECT();
-    ROW5_DISCONNECT();
-
-    COL1_DISCONNECT();
-    COL2_DISCONNECT();
-    COL3_DISCONNECT();
-    COL4_DISCONNECT();
-    COL5_DISCONNECT();
-}
-
-void leds_on(led_id_t led_id) {
-    
-    switch(led_id) {
-        
-        case LED11: ROW1_OUTPUT(); ROW1_HIGH(); COL1_OUTPUT(); COL1_LOW(); break;
-        case LED12: ROW1_OUTPUT(); ROW1_HIGH(); COL2_OUTPUT(); COL2_LOW(); break;
-        case LED13: ROW1_OUTPUT(); ROW1_HIGH(); COL3_OUTPUT(); COL3_LOW(); break;
-        case LED14: ROW1_OUTPUT(); ROW1_HIGH(); COL4_OUTPUT(); COL4_LOW(); break;
-        case LED15: ROW1_OUTPUT(); ROW1_HIGH(); COL5_OUTPUT(); COL5_LOW(); break;
-
-        case LED21: ROW2_OUTPUT(); ROW2_HIGH(); COL1_OUTPUT(); COL1_LOW(); break;
-        case LED22: ROW2_OUTPUT(); ROW2_HIGH(); COL2_OUTPUT(); COL2_LOW(); break;
-        case LED23: ROW2_OUTPUT(); ROW2_HIGH(); COL3_OUTPUT(); COL3_LOW(); break;
-        case LED24: ROW2_OUTPUT(); ROW2_HIGH(); COL4_OUTPUT(); COL4_LOW(); break;
-        case LED25: ROW2_OUTPUT(); ROW2_HIGH(); COL5_OUTPUT(); COL5_LOW(); break;
-
-        case LED31: ROW3_OUTPUT(); ROW3_HIGH(); COL1_OUTPUT(); COL1_LOW(); break;
-        case LED32: ROW3_OUTPUT(); ROW3_HIGH(); COL2_OUTPUT(); COL2_LOW(); break;
-        case LED33: ROW3_OUTPUT(); ROW3_HIGH(); COL3_OUTPUT(); COL3_LOW(); break;
-        case LED34: ROW3_OUTPUT(); ROW3_HIGH(); COL4_OUTPUT(); COL4_LOW(); break;
-        case LED35: ROW3_OUTPUT(); ROW3_HIGH(); COL5_OUTPUT(); COL5_LOW(); break;
-
-        case LED41: ROW4_OUTPUT(); ROW4_HIGH(); COL1_OUTPUT(); COL1_LOW(); break;
-        case LED42: ROW4_OUTPUT(); ROW4_HIGH(); COL2_OUTPUT(); COL2_LOW(); break;
-        case LED43: ROW4_OUTPUT(); ROW4_HIGH(); COL3_OUTPUT(); COL3_LOW(); break;
-        case LED44: ROW4_OUTPUT(); ROW4_HIGH(); COL4_OUTPUT(); COL4_LOW(); break;
-        case LED45: ROW4_OUTPUT(); ROW4_HIGH(); COL5_OUTPUT(); COL5_LOW(); break;
-
-        case LED51: ROW5_OUTPUT(); ROW5_HIGH(); COL1_OUTPUT(); COL1_LOW(); break;
-        case LED52: ROW5_OUTPUT(); ROW5_HIGH(); COL2_OUTPUT(); COL2_LOW(); break;
-        case LED53: ROW5_OUTPUT(); ROW5_HIGH(); COL3_OUTPUT(); COL3_LOW(); break;
-        case LED54: ROW5_OUTPUT(); ROW5_HIGH(); COL4_OUTPUT(); COL4_LOW(); break;
-        case LED55: ROW5_OUTPUT(); ROW5_HIGH(); COL5_OUTPUT(); COL5_LOW(); break;
-    }
-}
+uint8_t pdu[6];
 
 int main(void) {
-    uint8_t i;
+    
+    // confiureg HF clock
+    NRF_CLOCK->TASKS_HFCLKSTART = 1;
+    while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) {}
 
-    leds_on(LED11);
+    // configure radio
+    NRF_RADIO->MODE          = (  RADIO_MODE_MODE_Ble_LR125Kbit << RADIO_MODE_MODE_Pos);
+    NRF_RADIO->TXPOWER       = (  RADIO_TXPOWER_TXPOWER_Pos8dBm << RADIO_TXPOWER_TXPOWER_Pos);
+    NRF_RADIO->PCNF0         = (                              8 << RADIO_PCNF0_LFLEN_Pos)          |
+                               (                              1 << RADIO_PCNF0_S0LEN_Pos)          |
+                               (                              0 << RADIO_PCNF0_S1LEN_Pos)          |
+                               (                              2 << RADIO_PCNF0_CILEN_Pos)          |
+                               (     RADIO_PCNF0_PLEN_LongRange << RADIO_PCNF0_PLEN_Pos)           |
+                               (                              3 << RADIO_PCNF0_TERMLEN_Pos);
+    NRF_RADIO->PCNF1         = (                    sizeof(pdu) << RADIO_PCNF1_MAXLEN_Pos)         |
+                               (                              0 << RADIO_PCNF1_STATLEN_Pos)        |
+                               (                              3 << RADIO_PCNF1_BALEN_Pos)          |
+                               (      RADIO_PCNF1_ENDIAN_Little << RADIO_PCNF1_ENDIAN_Pos)         |
+                               (   RADIO_PCNF1_WHITEEN_Disabled << RADIO_PCNF1_WHITEEN_Pos);
+    NRF_RADIO->BASE0         = 0x00;
+    NRF_RADIO->TXADDRESS     = 0UL;
+    NRF_RADIO->RXADDRESSES   = (RADIO_RXADDRESSES_ADDR0_Enabled << RADIO_RXADDRESSES_ADDR0_Pos);
+    NRF_RADIO->TIFS          = 0;
+    NRF_RADIO->CRCCNF        = (         RADIO_CRCCNF_LEN_Three << RADIO_CRCCNF_LEN_Pos)           |
+                               (     RADIO_CRCCNF_SKIPADDR_Skip << RADIO_CRCCNF_SKIPADDR_Pos);
+    NRF_RADIO->CRCINIT       = 0xFFFFUL;
+    NRF_RADIO->CRCPOLY       = 0x00065b; // CRC poly: x^16 + x^12^x^5 + 1
+    NRF_RADIO->FREQUENCY     = 10;
+    NRF_RADIO->PACKETPTR     = (uint32_t)pdu;
 
-    i=0;
-    while(1) {
-        leds_all_off();
-        leds_on(LEDS_SMILEY[i]);
-        i = (i+1)%sizeof(LEDS_SMILEY);
-    }
+    // receive
+    NRF_RADIO->EVENTS_READY  = 0;
+    NRF_RADIO->TASKS_RXEN    = 1;
+    while(NRF_RADIO->EVENTS_READY==0);
+    NRF_RADIO->TASKS_START   = 1;
+
+    while(1);
 }
