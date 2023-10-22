@@ -26,8 +26,15 @@ uint8_t BUF_ACTION_SIT_DOWN[] = {
     0xAA, // end 2
 };
 
-uint8_t uartvars_txBuf[9];
 uint8_t uartvars_rxBuf[9];
+
+uint8_t _compute_crc(void) {
+    uint16_t tmp = 0x09; // frame->length;
+    tmp += 0x00; // frame->command_type;
+    tmp += 0x3e; // frame->address;
+    tmp += 0x0C; // frame->data;
+    return 0xff - (uint8_t)(tmp & 0x00ff);
+}
 
 int main(void) {
     
@@ -47,6 +54,7 @@ int main(void) {
     // xxxx xxxx xxxx xx00 xxxx xxxx xxxx 0011 
     //    0    0    0    0    0    0    0    3 0x00000003
     NRF_P0->PIN_CNF[4]                 = 0x00000003;
+    NRF_P0->OUTSET                     = (0x00000001 << 4);
 
     // configure P0.03 (UART RX) as input
     //  3           2            1           0
@@ -61,14 +69,14 @@ int main(void) {
     NRF_P0->PIN_CNF[3]                 = 0x0000000c;
 
     // configure
-    NRF_UARTE0->TXD.PTR                = (uint32_t)uartvars_txBuf;
-    NRF_UARTE0->TXD.MAXCNT             = sizeof(uartvars_txBuf);
+    NRF_UARTE0->TXD.PTR                = (uint32_t)BUF_ACTION_SIT_DOWN;
+    NRF_UARTE0->TXD.MAXCNT             = sizeof(BUF_ACTION_SIT_DOWN);
     NRF_UARTE0->RXD.PTR                = (uint32_t)uartvars_rxBuf;
     NRF_UARTE0->RXD.MAXCNT             = sizeof(uartvars_rxBuf);
     NRF_UARTE0->PSEL.TXD               = 0x00000004; // 0x00000004==P0.04
     NRF_UARTE0->PSEL.RXD               = 0x00000003; // 0x00000003==P0.03
     NRF_UARTE0->CONFIG                 = 0x00000000; // 0x00000000==no flow control, no parity bits, 1 stop bit
-    NRF_UARTE0->BAUDRATE               = 0x01D7E000; // 0x01D7E000==Baud115200
+    NRF_UARTE0->BAUDRATE               = 0x01D60000; // 0x01D60000==Baud115200
     
     //  3           2            1           0
     // 1098 7654 3210 9876 5432 1098 7654 3210
@@ -85,17 +93,29 @@ int main(void) {
     // .... .... .L.. .... .... .... .... .... L: TXSTOPPED
     // xxxx xxxx x0x0 0x0x xxxx xx01 0xx0 x000 
     //    0    0    0    0    0    1    0    0 0x00000100
-    NRF_UARTE0->INTENSET               = 0x00000100;
+    //NRF_UARTE0->INTENSET               = 0x00000100;
     NRF_UARTE0->ENABLE                 = 0x00000008; // 0x00000008==enable
     
     // enable interrupts
+    /*
     NVIC_SetPriority(UARTE0_UART0_IRQn, 1);
     NVIC_ClearPendingIRQ(UARTE0_UART0_IRQn);
     NVIC_EnableIRQ(UARTE0_UART0_IRQn);
+    */
 
-    memcpy(uartvars_txBuf,BUF_ACTION_SIT_DOWN,sizeof(BUF_ACTION_SIT_DOWN));
+    BUF_ACTION_SIT_DOWN[6] = _compute_crc();
 
+    NRF_UARTE0->EVENTS_ENDTX           = 0;
     NRF_UARTE0->TASKS_STARTTX          = 0x00000001;
+    while(NRF_UARTE0->EVENTS_ENDTX== 0);
+
+    NRF_UARTE0->EVENTS_ENDTX           = 0;
+    NRF_UARTE0->TASKS_STARTTX          = 0x00000001;
+    while(NRF_UARTE0->EVENTS_ENDTX== 0);
+
+    NRF_UARTE0->EVENTS_ENDTX           = 0;
+    NRF_UARTE0->TASKS_STARTTX          = 0x00000001;
+    while(NRF_UARTE0->EVENTS_ENDTX== 0);
 
     while(1);
 }
