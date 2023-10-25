@@ -1,7 +1,9 @@
+#include <stdio.h>
+
 #include <nrf.h>
 #include "nrf52833.h"
 
-uint8_t pdu[6];
+static uint8_t pdu[6] = { 0 };
 
 int main(void) {
     
@@ -23,7 +25,7 @@ int main(void) {
                                (                              3 << RADIO_PCNF1_BALEN_Pos)          |
                                (      RADIO_PCNF1_ENDIAN_Little << RADIO_PCNF1_ENDIAN_Pos)         |
                                (   RADIO_PCNF1_WHITEEN_Disabled << RADIO_PCNF1_WHITEEN_Pos);
-    NRF_RADIO->BASE0         = 0x00;
+    NRF_RADIO->BASE0         = 0xAAAAAAAAUL;
     NRF_RADIO->TXADDRESS     = 0UL;
     NRF_RADIO->RXADDRESSES   = (RADIO_RXADDRESSES_ADDR0_Enabled << RADIO_RXADDRESSES_ADDR0_Pos);
     NRF_RADIO->TIFS          = 0;
@@ -35,10 +37,28 @@ int main(void) {
     NRF_RADIO->PACKETPTR     = (uint32_t)pdu;
 
     // receive
-    NRF_RADIO->EVENTS_READY  = 0;
+    NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
+                        (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos) |
+                        (RADIO_SHORTS_DISABLED_RXEN_Enabled << RADIO_SHORTS_DISABLED_RXEN_Pos);
     NRF_RADIO->TASKS_RXEN    = 1;
-    while(NRF_RADIO->EVENTS_READY==0);
-    NRF_RADIO->TASKS_START   = 1;
 
-    while(1);
+    NRF_RADIO->INTENCLR = 0xffffffff;
+    NVIC_EnableIRQ(RADIO_IRQn);
+    NRF_RADIO->INTENSET = (RADIO_INTENSET_DISABLED_Enabled << RADIO_INTENSET_DISABLED_Pos);
+
+    while(1) {
+        __WFE();
+    }
+}
+
+void RADIO_IRQHandler(void) {
+    if (NRF_RADIO->EVENTS_DISABLED) {
+        NRF_RADIO->EVENTS_DISABLED = 0;
+
+        if (NRF_RADIO->CRCSTATUS != RADIO_CRCSTATUS_CRCSTATUS_CRCOk) {
+            puts("Invalid CRC");
+        } else {
+            printf("Received packet (%dB): %s\n", pdu[1], &pdu[2]);
+        }
+    }
 }
