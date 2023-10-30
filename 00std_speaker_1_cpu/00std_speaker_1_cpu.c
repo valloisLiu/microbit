@@ -2,7 +2,7 @@
 
 void wait(void) {
     volatile uint32_t a;
-    for (a=0; a<0xffff;a++);
+    for (a=0; a<8000;a++);
 }
 
 int main(void) {
