@@ -1,15 +1,15 @@
 #include <nrf.h>
 #include "nrf52833.h"
 
-uint8_t pdu[] = {
+static uint8_t pdu[] = {
     0x00, // header
        6, // length
-    0x00,0x11,0x22,0x33,0x44,0x55
+    0x41, 0x42, 0x43, 0x44, 0x45, 0x00
 };
 
 int main(void) {
     
-    // confiureg HF clock
+    // configured HF clock
     NRF_CLOCK->TASKS_HFCLKSTART = 1;
     while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) {}
 
@@ -27,10 +27,10 @@ int main(void) {
                                (                              3 << RADIO_PCNF1_BALEN_Pos)          |
                                (      RADIO_PCNF1_ENDIAN_Little << RADIO_PCNF1_ENDIAN_Pos)         |
                                (   RADIO_PCNF1_WHITEEN_Disabled << RADIO_PCNF1_WHITEEN_Pos);
-    NRF_RADIO->BASE0         = 0x00;
+    NRF_RADIO->BASE0         = 0xAAAAAAAAUL;
     NRF_RADIO->TXADDRESS     = 0UL;
     NRF_RADIO->RXADDRESSES   = (RADIO_RXADDRESSES_ADDR0_Enabled << RADIO_RXADDRESSES_ADDR0_Pos);
-    NRF_RADIO->TIFS          = 0;
+    NRF_RADIO->TIFS          = 1000U;
     NRF_RADIO->CRCCNF        = (         RADIO_CRCCNF_LEN_Three << RADIO_CRCCNF_LEN_Pos)           |
                                (     RADIO_CRCCNF_SKIPADDR_Skip << RADIO_CRCCNF_SKIPADDR_Pos);
     NRF_RADIO->CRCINIT       = 0xFFFFUL;
@@ -38,11 +38,24 @@ int main(void) {
     NRF_RADIO->FREQUENCY     = 10;
     NRF_RADIO->PACKETPTR     = (uint32_t)pdu;
 
-    // transmit
-    NRF_RADIO->EVENTS_READY  = 0;
-    NRF_RADIO->TASKS_TXEN    = 1;
-    while(NRF_RADIO->EVENTS_READY==0);
-    NRF_RADIO->TASKS_START   = 1;
+    NRF_RADIO->INTENCLR = 0xffffffff;
+    NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
+                        (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
+    NRF_RADIO->INTENSET = (RADIO_INTENSET_DISABLED_Enabled << RADIO_INTENSET_DISABLED_Pos);
+    NVIC_EnableIRQ(RADIO_IRQn);
 
-    while(1);
+    // Send continuously every <something> us
+    while(1) {
+        NRF_RADIO->TASKS_TXEN = (RADIO_TASKS_TXEN_TASKS_TXEN_Trigger << RADIO_TASKS_TXEN_TASKS_TXEN_Pos);
+        while (NRF_RADIO->EVENTS_DISABLED != 0) {}
+
+        uint32_t timeout = 0xfffff;
+        while (timeout--) {}
+    }
+}
+
+void RADIO_IRQHandler(void) {
+    if (NRF_RADIO->EVENTS_DISABLED) {
+        NRF_RADIO->EVENTS_DISABLED = 0;
+    }
 }
