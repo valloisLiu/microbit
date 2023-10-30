@@ -3,7 +3,7 @@
 #include <nrf.h>
 #include "nrf52833.h"
 
-static uint8_t pdu[6] = { 0 };
+static uint8_t pdu[8+1] = { 0 };
 
 int main(void) {
     

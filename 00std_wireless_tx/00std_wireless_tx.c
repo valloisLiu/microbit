@@ -4,8 +4,10 @@
 static uint8_t pdu[] = {
     0x00, // header
        6, // length
-    0x41, 0x42, 0x43, 0x44, 0x45, 0x00
+    0x45, 0x53, 0x49, 0x52, 0x4f, 0x49
 };
+
+uint32_t wait;
 
 int main(void) {
     
@@ -44,13 +46,14 @@ int main(void) {
     NRF_RADIO->INTENSET = (RADIO_INTENSET_DISABLED_Enabled << RADIO_INTENSET_DISABLED_Pos);
     NVIC_EnableIRQ(RADIO_IRQn);
 
-    // Send continuously every <something> us
     while(1) {
+        // send
         NRF_RADIO->TASKS_TXEN = (RADIO_TASKS_TXEN_TASKS_TXEN_Trigger << RADIO_TASKS_TXEN_TASKS_TXEN_Pos);
         while (NRF_RADIO->EVENTS_DISABLED != 0) {}
-
-        uint32_t timeout = 0xfffff;
-        while (timeout--) {}
+        
+        // wait a bit
+        wait = 0x00ffffff;
+        while (wait--);
     }
 }
 
