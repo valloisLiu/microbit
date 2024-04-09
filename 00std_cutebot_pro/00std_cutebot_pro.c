@@ -120,31 +120,118 @@ void i2c_send(uint8_t* buf, uint8_t buflen) {
     while(NRF_TWI0->EVENTS_TXDSENT==0);
     NRF_TWI0->TASKS_STOP     = 1;
 }
+void delay_ms(uint32_t delay) {
+    // 这里添加简单的延时函数，用于控制旋转的时间
+    // 注意：这种延时方法是阻塞式的，实际应用中可能需要更精确的时间控制方法
+    uint32_t time = delay * 1000; // 假设每个循环大约1微秒
+    while (time--) {
+        __NOP(); // 执行空操作（No Operation），用于延时
+    }
+}
 
+//int main(void) {
+//    i2c_init();
+//    while(1){}
+//    while(1) {
+//        // 向前走500毫秒
+//        uint8_t I2CBUF_MOTORS_FORWARD[] = {0x99, 0x01, 0x03, 0x01, MOTOR_SPEED, 0x00, 0x88};
+//        i2c_send(I2CBUF_MOTORS_FORWARD, sizeof(I2CBUF_MOTORS_FORWARD));
+//        delay_ms(500); // 延时500毫秒
+
+//        // 停止，为了使转向更加明显，这里可以加入短暂的停止时间
+//        i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+//        delay_ms(100); // 短暂停止100毫秒
+
+//        // 向后转（两个电机方向相反）并走500毫秒
+//        // 例如，可以让左电机前进，右电机后退
+//        uint8_t I2CBUF_MOTOR_LEFT_FWD[]  = {0x99, 0x01, 0x01, 0x01, MOTOR_SPEED, 0x00, 0x88};
+//        uint8_t I2CBUF_MOTOR_RIGHT_BACK[] = {0x99, 0x01, 0x02, 0x00, MOTOR_SPEED, 0x00, 0x88};
+//        i2c_send(I2CBUF_MOTOR_LEFT_FWD, sizeof(I2CBUF_MOTOR_LEFT_FWD));
+//        i2c_send(I2CBUF_MOTOR_RIGHT_BACK, sizeof(I2CBUF_MOTOR_RIGHT_BACK));
+//        delay_ms(50); // 延时500毫秒
+
+//        // 再次停止，准备下一个循环
+//        i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+//        delay_ms(100); // 短暂停止100毫秒
+//    }
+//}
 int main(void) {
+  i2c_init();
     
-    i2c_init();
+    // 假设这是让机器人向左旋转90度所需的时间，这个值需要你根据实际情况调整
+    delay_ms(14000);
+    for(int i = 0; i < 3; i++) {
+        i2c_send(I2CBUF_MOTOR_LEFT_BACK, sizeof(I2CBUF_MOTOR_LEFT_BACK));  // 左侧电机后退
+        i2c_send(I2CBUF_MOTOR_RIGHT_FWD, sizeof(I2CBUF_MOTOR_RIGHT_FWD));  // 右侧电机前进
+        delay_ms(1000); // 假设旋转一圈需要的时间，需要根据实际情况调整
+        i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));          // 停止电机
+        delay_ms(500); // 短暂停止，准备下一次旋转
+    }
+    // 向左旋转90度
+    // 左电机后退，右电机前进
 
-    // motor left
-    i2c_send(I2CBUF_MOTOR_LEFT_FWD,    sizeof(I2CBUF_MOTOR_LEFT_FWD));
-    i2c_send(I2CBUF_MOTOR_LEFT_BACK,   sizeof(I2CBUF_MOTOR_LEFT_BACK));
-    i2c_send(I2CBUF_MOTORS_STOP,       sizeof(I2CBUF_MOTORS_STOP));
-    // motor right
-    i2c_send(I2CBUF_MOTOR_RIGHT_FWD,   sizeof(I2CBUF_MOTOR_RIGHT_FWD));
-    i2c_send(I2CBUF_MOTOR_RIGHT_BACK,  sizeof(I2CBUF_MOTOR_RIGHT_BACK));
-    i2c_send(I2CBUF_MOTORS_STOP,       sizeof(I2CBUF_MOTORS_STOP));
-    // led left
-    i2c_send(I2CBUF_LED_LEFT_WHITE,    sizeof(I2CBUF_LED_LEFT_WHITE));
-    i2c_send(I2CBUF_LED_LEFT_RED,      sizeof(I2CBUF_LED_LEFT_RED));
-    i2c_send(I2CBUF_LED_LEFT_GREEN,    sizeof(I2CBUF_LED_LEFT_GREEN));
-    i2c_send(I2CBUF_LED_LEFT_BLUE,     sizeof(I2CBUF_LED_LEFT_BLUE));
-    i2c_send(I2CBUF_LED_LEFT_OFF,      sizeof(I2CBUF_LED_LEFT_OFF));
-    // led right
-    i2c_send(I2CBUF_LED_RIGHT_WHITE,   sizeof(I2CBUF_LED_RIGHT_WHITE));
-    i2c_send(I2CBUF_LED_RIGHT_RED,     sizeof(I2CBUF_LED_RIGHT_RED));
-    i2c_send(I2CBUF_LED_RIGHT_GREEN,   sizeof(I2CBUF_LED_RIGHT_GREEN));
-    i2c_send(I2CBUF_LED_RIGHT_BLUE,    sizeof(I2CBUF_LED_RIGHT_BLUE));
-    i2c_send(I2CBUF_LED_RIGHT_OFF,     sizeof(I2CBUF_LED_RIGHT_OFF));
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+    delay_ms(100); // 短暂停止
+
+    // 向前走200毫秒
+    uint8_t I2CBUF_MOTORS_FORWARD[] = {0x99, 0x01, 0x03, 0x01, MOTOR_SPEED, 0x00, 0x88};
+    i2c_send(I2CBUF_MOTORS_FORWARD, sizeof(I2CBUF_MOTORS_FORWARD));
+    delay_ms(8000); // 走直线的时间
+
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+    delay_ms(100); // 短暂停止
+
+    // 再次向左旋转90度
+    for(int i = 0; i < 3; i++) {
+        i2c_send(I2CBUF_MOTOR_LEFT_BACK, sizeof(I2CBUF_MOTOR_LEFT_BACK));  // 左侧电机后退
+        i2c_send(I2CBUF_MOTOR_RIGHT_FWD, sizeof(I2CBUF_MOTOR_RIGHT_FWD));  // 右侧电机前进
+        delay_ms(1000); // 假设旋转一圈需要的时间，需要根据实际情况调整
+        i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));          // 停止电机
+        delay_ms(500); // 短暂停止，准备下一次旋转
+    }
+
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+    delay_ms(100); // 短暂停止
+
+    // 向前走200毫秒
+    i2c_send(I2CBUF_MOTORS_FORWARD, sizeof(I2CBUF_MOTORS_FORWARD));
+    delay_ms(8000); // 走直线的时间
+    for(int i = 0; i < 3; i++) {
+        i2c_send(I2CBUF_MOTOR_LEFT_BACK, sizeof(I2CBUF_MOTOR_LEFT_BACK));  // 左侧电机后退
+        i2c_send(I2CBUF_MOTOR_RIGHT_FWD, sizeof(I2CBUF_MOTOR_RIGHT_FWD));  // 右侧电机前进
+        delay_ms(1000); // 假设旋转一圈需要的时间，需要根据实际情况调整
+        i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));          // 停止电机
+        delay_ms(500); // 短暂停止，准备下一次旋转
+    }
+    // 向左旋转90度
+    // 左电机后退，右电机前进
+
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+    delay_ms(100); // 短暂停止
+
+    // 向前走200毫秒
+    i2c_send(I2CBUF_MOTORS_FORWARD, sizeof(I2CBUF_MOTORS_FORWARD));
+    delay_ms(8000); // 走直线的时间
+
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+    delay_ms(100); // 短暂停止
+
+    // 再次向左旋转90度
+    for(int i = 0; i < 3; i++) {
+        i2c_send(I2CBUF_MOTOR_LEFT_BACK, sizeof(I2CBUF_MOTOR_LEFT_BACK));  // 左侧电机后退
+        i2c_send(I2CBUF_MOTOR_RIGHT_FWD, sizeof(I2CBUF_MOTOR_RIGHT_FWD));  // 右侧电机前进
+        delay_ms(1000); // 假设旋转一圈需要的时间，需要根据实际情况调整
+        i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));          // 停止电机
+        delay_ms(500); // 短暂停止，准备下一次旋转
+    }
+
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
+    delay_ms(100); // 短暂停止
+
+    // 向前走200毫秒
+    i2c_send(I2CBUF_MOTORS_FORWARD, sizeof(I2CBUF_MOTORS_FORWARD));
+    delay_ms(8000); // 走直线的时间
+    i2c_send(I2CBUF_MOTORS_STOP, sizeof(I2CBUF_MOTORS_STOP));
 
     while(1);
 }
